@@ -1,28 +1,30 @@
-# AR Tarot — Queen of Swords (MAMN60)
+# AR Tarot Perspective — Queen of Swords Prototype (MAMN60)
 
 A marker-based AR prototype built in Unity with AR Foundation and ARKit image tracking.
 
 ## Concept
 
-The application recognizes one tarot card image: **Queen of Swords**.
+The current assignment prototype recognizes one tarot card image: **Queen of Swords**.
 
-After the marker is detected, a spatial AR interpretation appears around the card:
+After the marker is detected, a spatial AR interpretation appears around the physical/digital card:
 
 - **Right side — Upright:** Clarity / Independence / Truth
 - **Left side — Reversed:** Coldness / Harsh Judgment / Isolation
-- **Center:** Queen of Swords
+- **Above the card:** Queen of Swords
 
-The interface reacts to the viewer's position relative to the marker. Moving the camera toward one side makes that interpretation larger, clearer, and less angled, while the opposite side recedes. The interaction is intended to create a perspective-based, "empty-box" style layout rather than a simple static overlay.
+The physical card image itself stays visible in the middle. The interface reacts to the viewer's position relative to the marker: moving the camera toward one side makes that interpretation larger, clearer, less angled, and slightly closer while the opposite side recedes. The interaction is intended to create a perspective-based, "empty-box" style layout rather than a static overlay.
 
 ## Marker
 
-Use the Queen of Swords image selected for the project and save it exactly as:
+Use the selected Rider–Waite–Smith **Queen of Swords** image. The setup script accepts any of these paths:
 
-`Assets/Marker/QueenOfSwords.png`
+- `Assets/Marker/QueenOfSwords.jpg`
+- `Assets/Marker/Swords13.jpg`
+- `Assets/Marker/QueenOfSwords.png`
 
-The image can be shown on a second iPad/tablet instead of using a physical tarot card. Keep the marker screen still, avoid strong reflections, and display the image as large and cleanly as possible.
+The image can be shown on a second iPad/tablet instead of using a physical tarot card. Keep the marker screen still, avoid strong reflections, and display the image without other UI covering it.
 
-The setup script currently assumes a physical marker width of **0.12 m (12 cm)**. If the image is displayed at a noticeably different physical width, change `DefaultMarkerWidthMeters` in `Assets/Editor/TarotARSetup.cs`.
+The setup script currently assumes a physical/displayed marker width of **0.12 m (12 cm)**. If the displayed card is noticeably wider or narrower, change `DefaultMarkerWidthMeters` in `Assets/Editor/TarotARSetup.cs` to the actual displayed width.
 
 ## Unity Setup
 
@@ -34,9 +36,7 @@ The project uses Unity 6 and these XR packages:
 
 ### 1. Add the marker image
 
-Put the Queen of Swords PNG at:
-
-`Assets/Marker/QueenOfSwords.png`
+Create `Assets/Marker/` if it does not already exist and put the selected Queen of Swords image there using one of the accepted filenames above.
 
 ### 2. Generate the AR scene
 
@@ -51,12 +51,12 @@ This menu command:
 3. Adds the AR camera components.
 4. Adds `ARTrackedImageManager`.
 5. Creates/updates an `XRReferenceImageLibrary`.
-6. Registers `QueenOfSwords.png` as the image marker.
+6. Registers the Queen of Swords image as the marker named `QueenOfSwords`.
 7. Adds `TarotMarkerController`.
 8. Saves the generated scene as `Assets/Scenes/ARTarotQueenOfSwords.unity`.
 9. Adds the generated scene to Build Settings.
 
-If the scene was created before the PNG was added, either run the setup command again or run:
+If the scene was created before the image was added, either run the setup command again or run:
 
 `MAMN60 > Register Queen of Swords Marker`
 
@@ -70,24 +70,24 @@ Then switch the active build platform/profile to iOS and verify that ARKit is en
 
 ## Interaction Logic
 
-`TarotMarkerController.cs` reads the AR camera position in the tracked marker's local coordinate system:
+`TarotMarkerController.cs` converts the AR camera position into the tracked marker's local coordinate system:
 
 - Camera moves toward the marker's right side -> Upright panel is emphasized.
 - Camera moves toward the marker's left side -> Reversed panel is emphasized.
 - Camera remains near the center -> both side panels stay partially visible and angled.
 
-The effect uses position, scale, opacity, and local Y rotation to create a simple perspective transition.
+The effect uses local position, scale, opacity, and local Y rotation. It does **not** depend on the phone's gyroscope tilt alone; the interaction is based on the viewer's spatial viewpoint relative to the tracked image.
 
 If left/right feels reversed on the device, enable `Invert Left Right` on the `TarotMarkerController` component.
 
 ## Code Structure
 
-- `Assets/Scripts/TarotMarkerController.cs` — marker tracking lookup and viewpoint-dependent AR UI.
-- `Assets/Editor/TarotARSetup.cs` — creates the AR scene, reference image library, iOS settings, and required components.
+- `Assets/Scripts/TarotMarkerController.cs` — finds the tracked Queen of Swords marker, generates the three world-space UI panels, and controls the viewpoint-dependent perspective transition.
+- `Assets/Editor/TarotARSetup.cs` — creates the AR scene, reference image library, iOS settings, and required AR Foundation components.
 
 ## Code provenance / references
 
-The project-specific scripts were written for this MAMN60 prototype. The AR setup and image-tracking architecture follow Unity's official AR Foundation / ARKit APIs rather than third-party application code.
+The project-specific scripts were written for this MAMN60 prototype. No third-party application script was copied into the project. The implementation follows Unity's official AR Foundation / ARKit APIs and the same AR Foundation setup pattern used in the course work.
 
 Relevant official documentation:
 
@@ -95,16 +95,27 @@ Relevant official documentation:
 - ARTrackedImageManager API: https://docs.unity3d.com/Packages/com.unity.xr.arfoundation@6.3/api/UnityEngine.XR.ARFoundation.ARTrackedImageManager.html
 - Apple ARKit XR Plugin: https://docs.unity3d.com/Packages/com.unity.xr.arkit@6.3/manual/index.html
 
-## Current MVP Scope
+### What was implemented/modified for this prototype
 
-- [x] One tarot marker only: Queen of Swords
-- [x] Upright and reversed AR panels
+- Created a one-image `XRReferenceImageLibrary` for Queen of Swords.
+- Added an `ARTrackedImageManager` to detect and track the marker.
+- Added custom logic to compare the AR camera position with the marker's local X axis.
+- Built the Upright/Reversed UI at runtime using world-space canvases.
+- Added smooth scale, opacity, translation, and Y-axis rotation transitions to create the perspective effect.
+- Added an editor setup command so the AR scene and iOS/ARKit configuration can be reproduced consistently.
+
+## Current Assignment Scope
+
+- [x] One tarot marker: Queen of Swords
+- [x] Upright and reversed AR content
 - [x] Viewpoint-dependent perspective emphasis
 - [x] One-click Unity scene setup
 - [x] iOS / ARKit configuration helper
-- [ ] Add the final Queen of Swords PNG to `Assets/Marker/QueenOfSwords.png`
+- [ ] Put the final marker image into `Assets/Marker/`
 - [ ] Run the setup command in Unity
-- [ ] Build to iPhone/iPad and test physical marker size / left-right direction
+- [ ] Build to iPhone/iPad and test detection, actual marker width, and left/right direction
+
+The repository name is intentionally broader (`AR-Tarot-Perspective`) so the same interaction can later be extended to additional tarot cards. The MAMN60 submission itself remains a one-card Queen of Swords prototype.
 
 ## Course
 
