@@ -14,10 +14,18 @@ using UnityEngine.XR.ARSubsystems;
 public static class TarotARSetup
 {
     private const string ScenePath = "Assets/Scenes/ARTarotQueenOfSwords.unity";
-    private const string MarkerTexturePath = "Assets/Marker/QueenOfSwords.png";
     private const string LibraryPath = "Assets/ReferenceImages/TarotReferenceImageLibrary.asset";
     private const string MarkerName = "QueenOfSwords";
     private const float DefaultMarkerWidthMeters = 0.12f;
+
+    // The image supplied for this assignment is Swords13.jpg. The extra names make
+    // setup tolerant if the file is renamed or converted to PNG before import.
+    private static readonly string[] MarkerTextureCandidates =
+    {
+        "Assets/Marker/QueenOfSwords.jpg",
+        "Assets/Marker/Swords13.jpg",
+        "Assets/Marker/QueenOfSwords.png"
+    };
 
     [MenuItem("MAMN60/Setup Queen of Swords Marker AR")]
     public static void SetupScene()
@@ -27,7 +35,7 @@ public static class TarotARSetup
         EnsureFolder("Assets/ReferenceImages");
 
         XRReferenceImageLibrary library = GetOrCreateReferenceLibrary();
-        bool markerReady = TryRegisterMarker(library);
+        bool markerReady = TryRegisterMarker(library, out string markerPath);
 
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -103,11 +111,11 @@ public static class TarotARSetup
 
         if (markerReady)
         {
-            Debug.Log("Queen of Swords marker AR scene created successfully at " + ScenePath + ". The marker is registered as '" + MarkerName + "'.");
+            Debug.Log("Queen of Swords marker AR scene created successfully at " + ScenePath + ". Registered marker image: " + markerPath + ".");
         }
         else
         {
-            Debug.LogWarning("Scene created, but the marker image is still missing. Save the exact Queen of Swords image as Assets/Marker/QueenOfSwords.png, then run MAMN60 > Setup Queen of Swords Marker AR once more.");
+            Debug.LogWarning("Scene created, but the marker image is still missing. Put the supplied Queen of Swords image in Assets/Marker as QueenOfSwords.jpg, Swords13.jpg, or QueenOfSwords.png, then run the setup command again.");
         }
     }
 
@@ -118,9 +126,9 @@ public static class TarotARSetup
         EnsureFolder("Assets/ReferenceImages");
 
         XRReferenceImageLibrary library = GetOrCreateReferenceLibrary();
-        if (!TryRegisterMarker(library))
+        if (!TryRegisterMarker(library, out string markerPath))
         {
-            Debug.LogError("Marker image not found. Put the image at Assets/Marker/QueenOfSwords.png first.");
+            Debug.LogError("Marker image not found. Put the supplied image in Assets/Marker as QueenOfSwords.jpg, Swords13.jpg, or QueenOfSwords.png first.");
             return;
         }
 
@@ -130,7 +138,7 @@ public static class TarotARSetup
 
         AssetDatabase.SaveAssets();
         EditorSceneManager.MarkAllScenesDirty();
-        Debug.Log("Queen of Swords marker registered in the reference image library.");
+        Debug.Log("Queen of Swords marker registered from " + markerPath + ".");
     }
 
     [MenuItem("MAMN60/Configure iOS + ARKit for Tarot")]
@@ -172,9 +180,9 @@ public static class TarotARSetup
         return library;
     }
 
-    private static bool TryRegisterMarker(XRReferenceImageLibrary library)
+    private static bool TryRegisterMarker(XRReferenceImageLibrary library, out string markerPath)
     {
-        Texture2D markerTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(MarkerTexturePath);
+        Texture2D markerTexture = LoadMarkerTexture(out markerPath);
         if (markerTexture == null)
             return false;
 
@@ -196,6 +204,22 @@ public static class TarotARSetup
         EditorUtility.SetDirty(library);
         AssetDatabase.SaveAssets();
         return true;
+    }
+
+    private static Texture2D LoadMarkerTexture(out string markerPath)
+    {
+        foreach (string candidate in MarkerTextureCandidates)
+        {
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(candidate);
+            if (texture != null)
+            {
+                markerPath = candidate;
+                return texture;
+            }
+        }
+
+        markerPath = null;
+        return null;
     }
 
     private static int FindMarkerIndex(XRReferenceImageLibrary library)
