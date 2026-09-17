@@ -53,7 +53,7 @@ public sealed class TarotMarkerController : MonoBehaviour
         if (trackedImageManager == null || arCamera == null)
             return;
 
-        activeImage = FindTrackedQueenOfSwords();
+        activeImage = FindTrackedMarker();
 
         if (activeImage == null)
         {
@@ -71,7 +71,7 @@ public sealed class TarotMarkerController : MonoBehaviour
         UpdateViewpoint(activeImage);
     }
 
-    private ARTrackedImage FindTrackedQueenOfSwords()
+    private ARTrackedImage FindTrackedMarker()
     {
         foreach (ARTrackedImage trackedImage in trackedImageManager.trackables)
         {
@@ -98,31 +98,33 @@ public sealed class TarotMarkerController : MonoBehaviour
         contentRoot.localScale = Vector3.one;
 
         float markerWidth = Mathf.Clamp(trackedImage.size.x, 0.06f, 0.22f);
-        float sideOffset = Mathf.Clamp(markerWidth * 0.82f, 0.075f, 0.16f);
+        float markerHeight = Mathf.Clamp(trackedImage.size.y, 0.10f, 0.40f);
+        float sideOffset = Mathf.Clamp(markerWidth * 0.98f, 0.085f, 0.18f);
+        float titleOffset = markerHeight * 0.62f;
 
         leftPanel = CreatePanel(
             "Reversed Panel",
             "REVERSED\n\nColdness\nHarsh Judgment\nIsolation",
-            new Vector3(-sideOffset, 0f, 0f),
-            28f,
+            new Vector3(-sideOffset, 0f, -0.002f),
+            30f,
             -1f,
             new Vector2(430f, 560f),
             0.00024f);
 
         centerPanel = CreatePanel(
             "Title Panel",
-            "QUEEN OF\nSWORDS",
-            Vector3.zero,
+            "QUEEN OF SWORDS",
+            new Vector3(0f, titleOffset, -0.003f),
             0f,
             0f,
-            new Vector2(360f, 220f),
-            0.00022f);
+            new Vector2(470f, 140f),
+            0.00019f);
 
         rightPanel = CreatePanel(
             "Upright Panel",
             "UPRIGHT\n\nClarity\nIndependence\nTruth",
-            new Vector3(sideOffset, 0f, 0f),
-            -28f,
+            new Vector3(sideOffset, 0f, -0.002f),
+            -30f,
             1f,
             new Vector2(430f, 560f),
             0.00024f);
@@ -174,13 +176,13 @@ public sealed class TarotMarkerController : MonoBehaviour
         RectTransform textRect = textObject.GetComponent<RectTransform>();
         textRect.anchorMin = Vector2.zero;
         textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(28f, 28f);
-        textRect.offsetMax = new Vector2(-28f, -28f);
+        textRect.offsetMin = new Vector2(28f, 24f);
+        textRect.offsetMax = new Vector2(-28f, -24f);
 
         Text label = textObject.GetComponent<Text>();
         label.text = text;
         label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        label.fontSize = 42;
+        label.fontSize = name == "Title Panel" ? 44 : 42;
         label.alignment = TextAnchor.MiddleCenter;
         label.color = Color.white;
         label.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -213,8 +215,8 @@ public sealed class TarotMarkerController : MonoBehaviour
         UpdateSidePanel(leftPanel, leftFocus, rightFocus);
 
         float strongestFocus = Mathf.Max(leftFocus, rightFocus);
-        centerPanel.Group.alpha = Mathf.Lerp(1f, 0.62f, strongestFocus);
-        centerPanel.Rect.localScale = centerPanel.BaseScale * Mathf.Lerp(1f, 0.9f, strongestFocus);
+        centerPanel.Group.alpha = Mathf.Lerp(0.92f, 0.58f, strongestFocus);
+        centerPanel.Rect.localScale = centerPanel.BaseScale * Mathf.Lerp(1f, 0.92f, strongestFocus);
         centerPanel.Rect.localPosition = centerPanel.BasePosition;
         centerPanel.Rect.localRotation = Quaternion.identity;
     }
@@ -227,14 +229,15 @@ public sealed class TarotMarkerController : MonoBehaviour
 
     private static void UpdateSidePanel(PanelHandle panel, float focus, float oppositeFocus)
     {
-        float alpha = Mathf.Lerp(0.38f, 1f, focus) * Mathf.Lerp(1f, 0.42f, oppositeFocus);
-        float scaleMultiplier = Mathf.Lerp(0.84f, 1.18f, focus) * Mathf.Lerp(1f, 0.9f, oppositeFocus);
+        float alpha = Mathf.Lerp(0.34f, 1f, focus) * Mathf.Lerp(1f, 0.38f, oppositeFocus);
+        float scaleMultiplier = Mathf.Lerp(0.82f, 1.2f, focus) * Mathf.Lerp(1f, 0.88f, oppositeFocus);
         float yaw = Mathf.Lerp(panel.ClosedYaw, 0f, focus);
-        float outwardShift = 0.018f * focus * panel.OutwardDirection;
+        float outwardShift = 0.022f * focus * panel.OutwardDirection;
+        float towardViewerShift = -0.010f * focus;
 
         panel.Group.alpha = alpha;
         panel.Rect.localScale = panel.BaseScale * scaleMultiplier;
         panel.Rect.localRotation = Quaternion.Euler(0f, yaw, 0f);
-        panel.Rect.localPosition = panel.BasePosition + new Vector3(outwardShift, 0f, -0.008f * focus);
+        panel.Rect.localPosition = panel.BasePosition + new Vector3(outwardShift, 0f, towardViewerShift);
     }
 }
