@@ -15,11 +15,10 @@ public static class TarotARSetup
 {
     private const string ScenePath = "Assets/Scenes/ARTarotQueenOfSwords.unity";
     private const string LibraryPath = "Assets/ReferenceImages/TarotReferenceImageLibrary.asset";
+    private const string DisplayTexturePath = "Assets/Resources/QueenOfSwordsDisplay.jpg";
     private const string MarkerName = "QueenOfSwords";
     private const float DefaultMarkerWidthMeters = 0.12f;
 
-    // The image supplied for this assignment is Swords13.jpg. The extra names make
-    // setup tolerant if the file is renamed or converted to PNG before import.
     private static readonly string[] MarkerTextureCandidates =
     {
         "Assets/Marker/QueenOfSwords.jpg",
@@ -27,12 +26,20 @@ public static class TarotARSetup
         "Assets/Marker/QueenOfSwords.png"
     };
 
+    [InitializeOnLoadMethod]
+    private static void AutoPrepareRuntimeTexture()
+    {
+        EditorApplication.delayCall += EnsureRuntimeDisplayTexture;
+    }
+
     [MenuItem("MAMN60/Setup Queen of Swords Marker AR")]
     public static void SetupScene()
     {
         EnsureFolder("Assets/Scenes");
         EnsureFolder("Assets/Marker");
         EnsureFolder("Assets/ReferenceImages");
+        EnsureFolder("Assets/Resources");
+        EnsureRuntimeDisplayTexture();
 
         XRReferenceImageLibrary library = GetOrCreateReferenceLibrary();
         bool markerReady = TryRegisterMarker(library, out string markerPath);
@@ -124,6 +131,8 @@ public static class TarotARSetup
     {
         EnsureFolder("Assets/Marker");
         EnsureFolder("Assets/ReferenceImages");
+        EnsureFolder("Assets/Resources");
+        EnsureRuntimeDisplayTexture();
 
         XRReferenceImageLibrary library = GetOrCreateReferenceLibrary();
         if (!TryRegisterMarker(library, out string markerPath))
@@ -178,6 +187,28 @@ public static class TarotARSetup
         AssetDatabase.CreateAsset(library, LibraryPath);
         AssetDatabase.SaveAssets();
         return library;
+    }
+
+    private static void EnsureRuntimeDisplayTexture()
+    {
+        EnsureFolder("Assets/Resources");
+
+        if (AssetDatabase.LoadAssetAtPath<Texture2D>(DisplayTexturePath) != null)
+            return;
+
+        foreach (string candidate in MarkerTextureCandidates)
+        {
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(candidate) == null)
+                continue;
+
+            if (AssetDatabase.CopyAsset(candidate, DisplayTexturePath))
+            {
+                AssetDatabase.ImportAsset(DisplayTexturePath, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.SaveAssets();
+                Debug.Log("Created runtime Queen of Swords display texture at " + DisplayTexturePath + ".");
+            }
+            return;
+        }
     }
 
     private static bool TryRegisterMarker(XRReferenceImageLibrary library, out string markerPath)
