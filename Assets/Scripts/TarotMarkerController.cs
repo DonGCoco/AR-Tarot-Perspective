@@ -26,6 +26,9 @@ public sealed class TarotMarkerController : MonoBehaviour
     [SerializeField] private float heroFlipDegrees = 360f;
     [SerializeField] private float heroFlipDuration = 0.78f;
 
+    [Header("On-screen guidance")]
+    [SerializeField] private float exploreHintDuration = 4.5f;
+
     private ARTrackedImage activeImage;
     private Transform contentRoot;
     private HeroHandle hero;
@@ -38,6 +41,12 @@ public sealed class TarotMarkerController : MonoBehaviour
 
     private bool wasTracking;
     private float entranceStartTime;
+
+    private CanvasGroup instructionGroup;
+    private Text instructionText;
+    private float instructionTargetAlpha;
+    private float instructionHideTime = -1f;
+    private bool showingExploreInstruction;
 
     private static readonly Color HeroPaper = new Color(0.95f, 0.92f, 0.84f, 1f);
     private static readonly Color Ink = new Color(0.11f, 0.10f, 0.09f, 1f);
@@ -94,12 +103,18 @@ public sealed class TarotMarkerController : MonoBehaviour
 
         if (arCamera == null)
             arCamera = Camera.main;
+
+        EnsureInstructionOverlay();
+        ShowScanInstruction();
     }
 
     private void Update()
     {
         if (trackedImageManager == null || arCamera == null)
+        {
+            UpdateInstructionOverlay();
             return;
+        }
 
         activeImage = FindTrackedMarker();
 
@@ -108,7 +123,14 @@ public sealed class TarotMarkerController : MonoBehaviour
             if (contentRoot != null)
                 contentRoot.gameObject.SetActive(false);
 
+            if (wasTracking || instructionText == null ||
+                instructionText.text != "SCAN THE TAROT CARD")
+            {
+                ShowScanInstruction();
+            }
+
             wasTracking = false;
+            UpdateInstructionOverlay();
             return;
         }
 
@@ -117,6 +139,7 @@ public sealed class TarotMarkerController : MonoBehaviour
         if (!wasTracking)
         {
             ResetEntrance();
+            ShowExploreInstruction();
             wasTracking = true;
         }
 
@@ -124,6 +147,117 @@ public sealed class TarotMarkerController : MonoBehaviour
 
         UpdateFloatingPose(activeImage);
         UpdateViewpoint(activeImage);
+        UpdateInstructionOverlay();
+    }
+
+    private void EnsureInstructionOverlay()
+    {
+        if (instructionGroup != null)
+            return;
+
+        GameObject canvasObject = new GameObject(
+            "Tarot Guidance",
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster),
+            typeof(CanvasGroup));
+
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 1000;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1170f, 2532f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        instructionGroup = canvasObject.GetComponent<CanvasGroup>();
+        instructionGroup.alpha = 0f;
+        instructionGroup.interactable = false;
+        instructionGroup.blocksRaycasts = false;
+
+        GameObject textObject = new GameObject(
+            "Instruction",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Text),
+            typeof(Shadow));
+
+        textObject.transform.SetParent(canvasObject.transform, false);
+
+        RectTransform rect = textObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.08f, 0.80f);
+        rect.anchorMax = new Vector2(0.92f, 0.92f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        instructionText = textObject.GetComponent<Text>();
+        instructionText.font =
+            Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        instructionText.fontSize = 34;
+        instructionText.fontStyle = FontStyle.Bold;
+        instructionText.alignment = TextAnchor.MiddleCenter;
+        instructionText.color = new Color(1f, 0.98f, 0.93f, 0.96f);
+        instructionText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        instructionText.verticalOverflow = VerticalWrapMode.Overflow;
+        instructionText.lineSpacing = 1.12f;
+        instructionText.raycastTarget = false;
+
+        Shadow shadow = textObject.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.70f);
+        shadow.effectDistance = new Vector2(2f, -2f);
+        shadow.useGraphicAlpha = true;
+    }
+
+    private void ShowScanInstruction()
+    {
+        EnsureInstructionOverlay();
+
+        instructionText.text = "SCAN THE TAROT CARD";
+        instructionTargetAlpha = 1f;
+        instructionHideTime = -1f;
+        showingExploreInstruction = false;
+    }
+
+    private void ShowExploreInstruction()
+    {
+        EnsureInstructionOverlay();
+
+        instructionText.text =
+            "MOVE YOUR PHONE LEFT OR RIGHT\nTO EXPLORE UPRIGHT / REVERSED";
+
+        instructionTargetAlpha = 1f;
+        instructionHideTime = Time.time + exploreHintDuration;
+        showingExploreInstruction = true;
+    }
+
+    private void UpdateInstructionOverlay()
+    {
+        if (instructionGroup == null)
+            return;
+
+        if (showingExploreInstruction)
+        {
+            bool timedOut =
+                instructionHideTime > 0f &&
+                Time.time >= instructionHideTime;
+
+            bool userHasMoved =
+                Mathf.Abs(currentSide) > 0.34f;
+
+            if (timedOut || userHasMoved)
+            {
+                instructionTargetAlpha = 0f;
+                showingExploreInstruction = false;
+            }
+        }
+
+        instructionGroup.alpha = Mathf.MoveTowards(
+            instructionGroup.alpha,
+            instructionTargetAlpha,
+            Time.deltaTime * 3.6f);
     }
 
     private ARTrackedImage FindTrackedMarker()
