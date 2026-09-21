@@ -22,6 +22,10 @@ public sealed class TarotMarkerController : MonoBehaviour
     [SerializeField] private float cameraLift = 0.055f;
     [SerializeField] private float worldLift = 0.050f;
 
+    [Header("Hero entrance spin")]
+    [SerializeField] private float heroSpinDegrees = 360f;
+    [SerializeField] private float heroSpinDuration = 0.78f;
+
     private ARTrackedImage activeImage;
     private Transform contentRoot;
     private HeroHandle hero;
@@ -647,7 +651,7 @@ public sealed class TarotMarkerController : MonoBehaviour
 
         float elapsed = Time.time - entranceStartTime;
         float interactionGate = Smooth01(
-            Mathf.InverseLerp(0.42f, 0.90f, elapsed));
+            Mathf.InverseLerp(heroSpinDuration + 0.05f, heroSpinDuration + 0.48f, elapsed));
 
         normalizedSide *= interactionGate;
 
@@ -673,8 +677,14 @@ public sealed class TarotMarkerController : MonoBehaviour
         float rightFocus)
     {
         float elapsed = Time.time - entranceStartTime;
-        float entrance = Smooth01(
-            Mathf.InverseLerp(0f, 0.58f, elapsed));
+
+        float riseProgress = Smooth01(
+            Mathf.InverseLerp(0f, 0.48f, elapsed));
+
+        float spinProgress = Mathf.Clamp01(
+            elapsed / Mathf.Max(0.01f, heroSpinDuration));
+
+        float spinEase = 1f - Mathf.Pow(1f - spinProgress, 3f);
 
         float strongestFocus =
             Mathf.Max(leftFocus, rightFocus);
@@ -682,45 +692,66 @@ public sealed class TarotMarkerController : MonoBehaviour
         float neutralFloat =
             Mathf.Sin(Time.time * 1.35f) *
             0.0024f *
-            (1f - strongestFocus);
+            (1f - strongestFocus) *
+            spinProgress;
 
-        Vector3 enteredPosition = new Vector3(
+        Vector3 settledPosition = new Vector3(
             -0.045f * side,
             neutralFloat + 0.004f * strongestFocus,
             0.046f * strongestFocus);
 
         Vector3 targetPosition = Vector3.Lerp(
             new Vector3(0f, -0.025f, 0.015f),
-            enteredPosition,
-            entrance);
+            settledPosition,
+            riseProgress);
+
+        float focusYaw = -10f * side;
+        float spinYaw = heroSpinDegrees * spinEase;
 
         Quaternion targetRotation = Quaternion.Euler(
-            -2f * (1f - entrance),
-            -10f * side,
+            -2f * (1f - riseProgress),
+            spinYaw + focusYaw,
             0f);
 
         float focusScale =
             Mathf.Lerp(1.03f, 0.76f, strongestFocus);
 
         float entranceScale =
-            Mathf.Lerp(0.78f, 1f, entrance);
+            Mathf.Lerp(0.78f, 1f, riseProgress);
+
+        // A subtle "pop" at the middle of the spin makes the entrance feel deliberate.
+        float spinPulse =
+            1f + Mathf.Sin(spinProgress * Mathf.PI) * 0.055f;
 
         Vector3 targetScale =
             hero.BaseScale *
             focusScale *
-            entranceScale;
+            entranceScale *
+            spinPulse;
 
-        float t = 1f - Mathf.Exp(-10f * Time.deltaTime);
+        float t = 1f - Mathf.Exp(-12f * Time.deltaTime);
 
         hero.Rect.localPosition = Vector3.Lerp(
             hero.Rect.localPosition,
             targetPosition,
             t);
 
-        hero.Rect.localRotation = Quaternion.Slerp(
-            hero.Rect.localRotation,
-            targetRotation,
-            t);
+        // During the actual 360-degree entrance, follow the spin angle directly.
+        // After the spin finishes, settle into the normal viewpoint-driven pose.
+        if (spinProgress < 1f)
+        {
+            hero.Rect.localRotation = targetRotation;
+        }
+        else
+        {
+            Quaternion settledRotation =
+                Quaternion.Euler(0f, focusYaw, 0f);
+
+            hero.Rect.localRotation = Quaternion.Slerp(
+                hero.Rect.localRotation,
+                settledRotation,
+                t);
+        }
 
         hero.Rect.localScale = Vector3.Lerp(
             hero.Rect.localScale,
@@ -728,7 +759,7 @@ public sealed class TarotMarkerController : MonoBehaviour
             t);
 
         float targetAlpha =
-            entrance *
+            riseProgress *
             Mathf.Lerp(1f, 0.84f, strongestFocus);
 
         hero.Group.alpha = Mathf.Lerp(
@@ -766,7 +797,7 @@ public sealed class TarotMarkerController : MonoBehaviour
         float elapsed = Time.time - entranceStartTime;
 
         float panelEntrance = Smooth01(
-            Mathf.InverseLerp(0.28f, 0.88f, elapsed));
+            Mathf.InverseLerp(heroSpinDuration * 0.72f, heroSpinDuration + 0.34f, elapsed));
 
         panel.CurrentFocus = Mathf.SmoothDamp(
             panel.CurrentFocus,
