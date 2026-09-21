@@ -22,9 +22,9 @@ public sealed class TarotMarkerController : MonoBehaviour
     [SerializeField] private float cameraLift = 0.055f;
     [SerializeField] private float worldLift = 0.050f;
 
-    [Header("Hero entrance spin")]
-    [SerializeField] private float heroSpinDegrees = 360f;
-    [SerializeField] private float heroSpinDuration = 0.78f;
+    [Header("Hero entrance flip")]
+    [SerializeField] private float heroFlipDegrees = 360f;
+    [SerializeField] private float heroFlipDuration = 0.78f;
 
     private ARTrackedImage activeImage;
     private Transform contentRoot;
@@ -651,7 +651,7 @@ public sealed class TarotMarkerController : MonoBehaviour
 
         float elapsed = Time.time - entranceStartTime;
         float interactionGate = Smooth01(
-            Mathf.InverseLerp(heroSpinDuration + 0.05f, heroSpinDuration + 0.48f, elapsed));
+            Mathf.InverseLerp(heroFlipDuration + 0.05f, heroFlipDuration + 0.48f, elapsed));
 
         normalizedSide *= interactionGate;
 
@@ -681,10 +681,10 @@ public sealed class TarotMarkerController : MonoBehaviour
         float riseProgress = Smooth01(
             Mathf.InverseLerp(0f, 0.48f, elapsed));
 
-        float spinProgress = Mathf.Clamp01(
-            elapsed / Mathf.Max(0.01f, heroSpinDuration));
+        float flipProgress = Mathf.Clamp01(
+            elapsed / Mathf.Max(0.01f, heroFlipDuration));
 
-        float spinEase = 1f - Mathf.Pow(1f - spinProgress, 3f);
+        float flipEase = 1f - Mathf.Pow(1f - flipProgress, 3f);
 
         float strongestFocus =
             Mathf.Max(leftFocus, rightFocus);
@@ -693,7 +693,7 @@ public sealed class TarotMarkerController : MonoBehaviour
             Mathf.Sin(Time.time * 1.35f) *
             0.0024f *
             (1f - strongestFocus) *
-            spinProgress;
+            flipProgress;
 
         Vector3 settledPosition = new Vector3(
             -0.045f * side,
@@ -706,11 +706,11 @@ public sealed class TarotMarkerController : MonoBehaviour
             riseProgress);
 
         float focusYaw = -10f * side;
-        float spinYaw = heroSpinDegrees * spinEase;
+        float flipPitch = heroFlipDegrees * flipEase;
 
         Quaternion targetRotation = Quaternion.Euler(
-            -2f * (1f - riseProgress),
-            spinYaw + focusYaw,
+            flipPitch - 2f * (1f - riseProgress),
+            focusYaw,
             0f);
 
         float focusScale =
@@ -719,15 +719,15 @@ public sealed class TarotMarkerController : MonoBehaviour
         float entranceScale =
             Mathf.Lerp(0.78f, 1f, riseProgress);
 
-        // A subtle "pop" at the middle of the spin makes the entrance feel deliberate.
-        float spinPulse =
-            1f + Mathf.Sin(spinProgress * Mathf.PI) * 0.055f;
+        // A subtle "pop" at the middle of the flip makes the entrance feel deliberate.
+        float flipPulse =
+            1f + Mathf.Sin(flipProgress * Mathf.PI) * 0.055f;
 
         Vector3 targetScale =
             hero.BaseScale *
             focusScale *
             entranceScale *
-            spinPulse;
+            flipPulse;
 
         float t = 1f - Mathf.Exp(-12f * Time.deltaTime);
 
@@ -736,9 +736,9 @@ public sealed class TarotMarkerController : MonoBehaviour
             targetPosition,
             t);
 
-        // During the actual 360-degree entrance, follow the spin angle directly.
-        // After the spin finishes, settle into the normal viewpoint-driven pose.
-        if (spinProgress < 1f)
+        // During the 360-degree entrance, flip vertically around the X axis.
+        // After the flip finishes, settle into the normal viewpoint-driven pose.
+        if (flipProgress < 1f)
         {
             hero.Rect.localRotation = targetRotation;
         }
@@ -797,7 +797,7 @@ public sealed class TarotMarkerController : MonoBehaviour
         float elapsed = Time.time - entranceStartTime;
 
         float panelEntrance = Smooth01(
-            Mathf.InverseLerp(heroSpinDuration * 0.72f, heroSpinDuration + 0.34f, elapsed));
+            Mathf.InverseLerp(heroFlipDuration * 0.72f, heroFlipDuration + 0.34f, elapsed));
 
         panel.CurrentFocus = Mathf.SmoothDamp(
             panel.CurrentFocus,
