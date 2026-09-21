@@ -46,7 +46,7 @@ The interaction is based on the viewer's **spatial position relative to the trac
 
 ## Marker-Based Tracking
 
-The core tracking setup follows the approach introduced in the course **Marker-Based AR Workshop**:
+The marker-tracking setup uses:
 
 - AR Session
 - XR Origin (Mobile AR)
@@ -55,13 +55,9 @@ The core tracking setup follows the approach introduced in the course **Marker-B
 - Apple ARKit XR Plugin
 - A reference image with a specified physical size
 
-The workshop demonstrates the basic workflow by spawning a cube on a recognized marker and rotating it.
-
-This project keeps the same marker-tracking foundation but replaces the workshop cube interaction with a custom tarot experience:
+The runtime flow is:
 
 **Marker detected → tarot card entrance animation → viewpoint-dependent Upright/Reversed AR interface**
-
-The 360° tarot-card entrance flip is also based on the same general idea as the workshop's rotating object example, but adapted to the presentation of a flat tarot card.
 
 ## Marker
 
@@ -180,13 +176,20 @@ For iOS configuration:
 
 Then build using **Build and Run** for the connected iOS device.
 
-## Code Provenance / References
+## Implementation Notes
 
-The **basic AR marker-tracking setup** follows the structure taught in the MAMN60 course Marker-Based AR Workshop.
+The main interaction logic is implemented in the custom `TarotMarkerController`.
 
-The workshop's example implementation uses a tracked-image prefab containing a cube and a simple rotation script. That example code is not used as the final interaction in this project.
+It handles:
 
-The project-specific tarot presentation, viewpoint calculation, spatial panel behavior, layered text reveal, instructions, and entrance animation are implemented in the custom `TarotMarkerController`.
+- Marker detection
+- Tarot card presentation
+- 360° vertical entrance flip
+- Viewpoint-relative left/right interaction
+- Spatial panel movement and perspective
+- Central-card shrink/recede behavior
+- Progressive text reveal
+- Scan and movement guidance
 
 Relevant Unity documentation:
 
@@ -212,9 +215,20 @@ Relevant Unity documentation:
 
 ## Future Extension
 
-The current assignment prototype intentionally uses one tarot card.
+The current prototype uses **Queen of Swords** as the first implemented tarot card, but the long-term goal is to extend the project into a complete interactive **78-card tarot deck**.
 
-The same structure can later be made data-driven so that multiple reference images can map to different tarot cards, meanings, artwork, and accent styles while reusing the same AR interaction system.
+The planned structure is:
+
+- **22 Major Arcana cards**
+- **56 Minor Arcana cards**
+- A separate reference image for each tarot card
+- Individual Upright and Reversed meanings for every card
+- Card-specific keywords, interpretations, and reflection questions
+- Reusable viewpoint-based interaction across the full deck
+- Card-specific accent colors and visual styling
+- A data-driven card system so new cards can be added without rewriting the core AR interaction code
+
+The intended final experience is that the user can scan any supported tarot card and automatically receive the corresponding AR interpretation while keeping the same spatial perspective interaction.
 
 ## Course
 
